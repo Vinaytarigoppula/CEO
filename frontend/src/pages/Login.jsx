@@ -5,9 +5,25 @@ const Login = () => {
     const navigate = useNavigate();
 
 
-    const onSubmitHandler = () => {
-        navigate('/dashboard');
-        toast.success(" User Login Successfull")
+    const onSubmitHandler = async() => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(formData),
+            });
+      
+            const data = await response.json();
+      
+            if (data.success) {
+              toast.success(" User Login Successfull")
+              navigate('/dashboard'); // ✅ Redirect after signup
+            } else {
+                toast.error("Login Unsuccesful");
+            }
+          } catch (error) {
+            toast.error("Backend Down");
+          }
     }
     return (
         <div className="flex items-center justify-center w-screen h-screen bg-gradient-to-r from-pink-400 to-cyan-400">

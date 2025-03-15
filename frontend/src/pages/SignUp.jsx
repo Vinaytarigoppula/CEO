@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 const SignUp = () => {
   const [formData, setFormData] = useState({
     email: '',
     username: '',
     password: '',
   });
+
+  const navigate = useNavigate(); // Import from react-router-dom
 
   const handleChange = (e) => {
     setFormData({
@@ -25,9 +28,15 @@ const SignUp = () => {
       });
 
       const data = await response.json();
-      console.log(data.message); // Show success or error message
+
+      if (data.success) {
+        toast.success("Signup Successful");
+        navigate('/dashboard'); // ✅ Redirect after signup
+      } else {
+        toast.error("Signup Failed");
+      }
     } catch (error) {
-      console.error('Error:', error);
+      toast.error("Backend Down");
     }
   };
 
