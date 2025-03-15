@@ -67,7 +67,7 @@ app.post("/signup", async (req, res) => {
 
         const newUser = new userModel({ username, email, password: hashedPassword });
         await newUser.save();
-        res.redirect("/login");
+        // res.redirect("/login");
         return res.json({ success: true, message: "User registered successfully" });
     } catch (err) {
         console.log(err);
