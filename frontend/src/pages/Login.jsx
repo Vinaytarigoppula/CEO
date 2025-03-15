@@ -9,16 +9,18 @@ const Login = () => {
     const [formData, setFormData] = useState({
         username: '',
         password: '',
+        rememberme: '',
     });
 
     // Handle input change
     const handleChange = (e) => {
+        const { name, type, checked, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [name]: type === "checkbox" ? checked : value, // ✅ Handles checkboxes correctly, other inputs stay the same
         });
     };
-
+    
     const onSubmitHandler = async (e) => {
         e.preventDefault(); // Prevent page reload
         
@@ -35,7 +37,7 @@ const Login = () => {
                 toast.success("User Login Successful");
                 navigate('/dashboard'); // ✅ Redirect after login
             } else {
-                toast.error("Login Unsuccessful");
+                toast.error("User/password is incorrect");
             }
         } catch (error) {
             console.error("Login Error:", error);
@@ -89,6 +91,8 @@ const Login = () => {
                                 type="checkbox"
                                 name="rememberme"
                                 id="rememberme"
+                                value={formData.rememberme}
+                                onChange={handleChange}
                                 className="w-5 h-5 rounded-md border-gray-400 text-blue-500 focus:ring-blue-400"
                             />
                             <label htmlFor="rememberme" className="text-gray-700">Remember Me</label>
