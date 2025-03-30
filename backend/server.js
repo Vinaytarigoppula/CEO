@@ -1,12 +1,13 @@
-import express from 'express'
-import cors from 'cors'
+import express from 'express';
+import cors from 'cors';
 import bodyParser from 'body-parser';
-import bcrypt from 'bcrypt'
-import dotenv from 'dotenv'
+import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import userModel from './models/userModel.js';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import jwt from 'jsonwebtoken';
 import authenticateUser from './middleware/authMiddleware.js';
 
@@ -14,7 +15,7 @@ dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGO_URL, {
     useNewUrlParser: true,
@@ -47,24 +48,23 @@ app.get('/dashboard', authenticateUser, (req, res) => {
 // 🔹 Login Route
 app.post('/login', async (req, res) => {
     try {
-        const { username, password, rem } = req.body;
+        const { username, password, rememberme } = req.body;
         const user = await userModel.findOne({ username });
         if (!user) {
-            return res.json({ success: false, message: "User doesn't exist" });
+            return res.status(400).json({ success: false, message: "User doesn't exist" });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.json({ success: false, message: "Invalid credentials" });
+            return res.status(400).json({ success: false, message: "Invalid credentials" });
         }
 
         const token = jwt.sign(
             { userId: user._id },
             process.env.JWT_SECRET,
-            { expiresIn: rem ? '30d' : '1d' } // Longer expiry if "Remember Me" is checked
+            { expiresIn: rememberme ? '30d' : '1d' } // Longer expiry if "Remember Me" is checked
         );
 
-        // Send token to the client (save it in localStorage or HTTP-only cookies)
         res.json({ success: true, token, message: "Login successful" });
     } catch (err) {
         console.log(err);
@@ -78,11 +78,11 @@ app.post('/signup', async (req, res) => {
         const { username, email, password } = req.body;
         const exist = await userModel.findOne({ email });
         if (exist) {
-            return res.json({ success: false, message: "User already exists" });
+            return res.status(400).json({ success: false, message: "User already exists" });
         }
 
         if (password.length < 8) {
-            return res.json({ success: false, message: "Password should be at least 8 characters" });
+            return res.status(400).json({ success: false, message: "Password should be at least 8 characters" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -90,6 +90,31 @@ app.post('/signup', async (req, res) => {
         await newUser.save();
 
         return res.json({ success: true, message: "User registered successfully" });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// 🔹 Code Execution Route
+app.post('/execute', async (req, res) => {
+    try {
+        const { code, language } = req.body;
+        if (!code || !language) {
+            return res.status(400).json({ success: false, message: "Code and language are required" });
+        }
+
+        if (language === 'java') {
+            const command = `echo "${code}" | javac -d /dev/shm/Main.java && java -cp /dev/shm Main`;
+            exec(command, (error, stdout, stderr) => {
+                if (error || stderr) {
+                    return res.json({ success: false, output: stderr || error.message });
+                }
+                res.json({ success: true, output: stdout });
+            });
+        } else {
+            res.status(400).json({ success: false, message: "Unsupported language" });
+        }
     } catch (err) {
         console.log(err);
         res.status(500).json({ success: false, message: err.message });
